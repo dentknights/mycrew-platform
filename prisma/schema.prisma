@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  displayName   String?
+  avatar        String?
+  password      String    // Hashed
+  isCreator     Boolean   @default(false)
+  isVerified    Boolean   @default(false)
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Creator profile
+  creatorProfile CreatorProfile?
+  
+  // Subscriptions (as fan)
+  subscriptions  Subscription[] @relation("FanSubscriptions")
+  
+  // Subscribers (as creator)
+  subscribers    Subscription[] @relation("CreatorSubscribers")
+  
+  // Content (as creator)
+  content        Content[]
+  
+  // Transactions
+  transactionsAsFan   Transaction[] @relation("FanTransactions")
+  transactionsAsCreator Transaction[] @relation("CreatorTransactions")
+  
+  // Messages
+  messagesSent     Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
+  
+  // Likes
+  likes          Like[]
+  
+  // Comments
+  comments       Comment[]
+  
+  // Accounts for NextAuth
+  accounts       Account[]
+  sessions       Session[]
+}
+
+model CreatorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Profile
+  bio             String?
+  bannerImage     String?
+  niche           String[] // Categories/tags
+  website         String?
+  location        String?
+  
+  // Subscription tiers
+  tiers           SubscriptionTier[]
+  
+  // Stats
+  followerCount   Int      @default(0)
+  subscriberCount Int      @default(0)
+  postCount       Int      @default(0)
+  mediaCount      Int      @default(0)
+  totalEarnings   Decimal  @default(0) @db.Decimal(10, 2)
+  
+  // Settings
+  isNSFW          Boolean  @default(false)
+  geoBlocked      String[] // Country codes
+  
+  // 90-day free trial tracking
+  trialStartDate  DateTime @default(now())
+  trialEndDate    DateTime?
+  monthlyFeeActive Boolean @default(false)
+  
+  // Stripe
+  stripeAccountId String?
+  
+  // Video call settings
+  videoCallEnabled Boolean @default(false)
+  videoCallPrice   Decimal? @db.Decimal(10, 2)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SubscriptionTier {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  description String?
+  benefits    String[]
+  isActive    Boolean  @default(true)
+  
+  subscriptions Subscription[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  fanId     String
+  fan       User     @relation("FanSubscriptions", fields: [fanId], references: [id], onDelete: Cascade)
+  tierId    String
+  tier      SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  
+  status    SubscriptionStatus @default(active)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  
+  // Payment tracking
+  stripeSubscriptionId String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([fanId, tierId])
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  type        ContentType
+  title       String?
+  caption     String?
+  mediaUrls   String[]
+  thumbnail   String?
+  
+  // Access control
+  isPublic    Boolean  @default(false)
+  isPPV       Boolean  @default(false) // Pay-per-view
+  ppvPrice    Decimal? @db.Decimal(10, 2)
+  tierAccess  String[] // Which tier IDs can view
+  
+  // Content protection
+  watermarkEnabled Boolean @default(true)
+  antiScreenshot   Boolean @default(true)
+  
+  // Engagement
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  purchases   Int      @default(0)
+  
+  // Scheduling
+  isScheduled Boolean  @default(false)
+  scheduledFor DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  likeRecords Like[]
+  commentRecords Comment[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  
+  fanId       String
+  fan         User     @relation("FanTransactions", fields: [fanId], references: [id], onDelete: Cascade)
+  creatorId   String
+  creator     User     @relation("CreatorTransactions", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  type        TransactionType
+  amount      Decimal  @db.Decimal(10, 2)
+  platformFee Decimal  @db.Decimal(10, 2)
+  creatorEarnings Decimal @db.Decimal(10, 2)
+  
+  status      TransactionStatus @default(pending)
+  stripePaymentId String?
+  stripeTransferId String?
+  
+  metadata    Json?    // Additional data
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  content     String
+  mediaUrls   String[]
+  isPaid      Boolean  @default(false)
+  price       Decimal? @db.Decimal(10, 2)
+  isUnlocked  Boolean  @default(false)
+  
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentId String
+  content   Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, contentId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentId String
+  content   Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  text      String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// NextAuth Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Enums
+enum SubscriptionStatus {
+  active
+  cancelled
+  expired
+  paused
+}
+
+enum ContentType {
+  post
+  image
+  video
+  live
+  story
+  audio
+}
+
+enum TransactionType {
+  subscription
+  ppv
+  tip
+  call
+  message
+  merch
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  refunded
+  disputed
+}
