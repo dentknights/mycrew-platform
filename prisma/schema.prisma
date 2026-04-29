@@ -46,6 +46,25 @@ model User {
   // Comments
   comments       Comment[]
   
+  // Collaboration Listings (as advertiser)
+  collaborationListings CollaborationListing[]
+  
+  // Collaboration Applications (as applicant)
+  collaborationApplications CollaborationApplication[]
+  
+  // Collaboration Reviews
+  reviewsGiven   CollaborationReview[] @relation("ReviewGiven")
+  reviewsReceived CollaborationReview[] @relation("ReviewReceived")
+  
+  // Referrals (as referrer)
+  referralsGiven  Referral[] @relation("Referrer")
+  
+  // Referrals (as referred user)
+  referralReceived Referral? @relation("Referred")
+  
+  // Rising Star Leaderboard entries
+  risingStarEntries RisingStarLeaderboard[]
+  
   // Accounts for NextAuth
   accounts       Account[]
   sessions       Session[]
@@ -88,6 +107,10 @@ model CreatorProfile {
   // Video call settings
   videoCallEnabled Boolean @default(false)
   videoCallPrice   Decimal? @db.Decimal(10, 2)
+  
+  // Collaboration settings
+  openToCollaborations Boolean @default(true)
+  collaborationPreferences String[]
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -304,4 +327,195 @@ enum TransactionStatus {
   failed
   refunded
   disputed
+}
+
+// COLLABORATION CLASSIFIEDS MODELS
+
+model CollaborationListing {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  collaborationType String[] // Types: photo-shoot, video-content, live-stream, etc.
+  
+  price           Decimal  @db.Decimal(10, 2)
+  priceType       PriceType @default(fixed)
+  duration        Int?     // Estimated hours
+  
+  deliverables    String[] // What's included
+  requirements    String?  // Requirements for applicants
+  
+  minFollowerCount Int    @default(0)
+  isNSFW          Boolean @default(false)
+  
+  isActive        Boolean @default(true)
+  status          ListingStatus @default(active)
+  
+  location        String?
+  isRemote        Boolean @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  expiresAt       DateTime?
+  
+  viewCount       Int @default(0)
+  applicationCount Int @default(0)
+  
+  // Relations
+  applications    CollaborationApplication[]
+  reviews         CollaborationReview[]
+  
+  @@index([creatorId])
+  @@index([isActive])
+  @@index([status])
+  @@index([price])
+  @@index([createdAt])
+}
+
+model CollaborationApplication {
+  id              String   @id @default(cuid())
+  listingId       String
+  listing         CollaborationListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  applicantId     String
+  applicant       User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  message         String?
+  proposedPrice   Decimal? @db.Decimal(10, 2)
+  
+  status          ApplicationStatus @default(pending)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  respondedAt     DateTime?
+  
+  @@index([listingId])
+  @@index([applicantId])
+  @@index([status])
+  @@unique([listingId, applicantId])
+}
+
+model CollaborationReview {
+  id              String   @id @default(cuid())
+  listingId       String
+  listing         CollaborationListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  reviewerId      String
+  reviewer        User     @relation("ReviewGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  revieweeId      String
+  reviewee        User     @relation("ReviewReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+  
+  rating          Int      // 1-5 stars
+  comment         String?
+  isVerified      Boolean  @default(false) // Verified collaboration happened
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([listingId])
+  @@index([revieweeId])
+}
+
+model CollaborationCategory {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  icon            String?
+  isActive        Boolean  @default(true)
+  listingCount    Int      @default(0)
+  
+  @@index([slug])
+}
+
+// REFERRAL & RISING STAR BONUS MODELS
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  referrer      User     @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  
+  referredId    String   @unique
+  referred      User     @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+  
+  code          String
+  status        ReferralStatus @default(pending)
+  bonusAmount   Decimal  @default(0) @db.Decimal(10, 2)
+  paidAt        DateTime?
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([referrerId])
+  @@index([code])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RisingStarLeaderboard {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  month           Int
+  year            Int
+  
+  newSignups      Int      @default(0)
+  paidSignups     Int      @default(0)
+  totalRevenue    Decimal  @default(0) @db.Decimal(10, 2)
+  
+  rank            Int?
+  bonusEarned     Decimal  @default(0) @db.Decimal(10, 2)
+  bonusPaid       Boolean  @default(false)
+  paidAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([creatorId, month, year])
+  @@index([month, year])
+  @@index([rank])
+  @@index([paidSignups])
+}
+
+model BonusConfiguration {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  minPaidSignups  Int      @default(0)
+  bonusAmount     Decimal  @db.Decimal(10, 2)
+  isActive        Boolean  @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Enums
+enum PriceType {
+  fixed
+  hourly
+  negotiable
+}
+
+enum ListingStatus {
+  active
+  paused
+  completed
+  expired
+}
+
+enum ApplicationStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+  completed
+}
+
+enum ReferralStatus {
+  pending
+  converted
+  expired
 }
