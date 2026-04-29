@@ -71,10 +71,10 @@ CREATE INDEX "RisingStarLeaderboard_month_year_idx" ON "RisingStarLeaderboard"("
 CREATE INDEX "RisingStarLeaderboard_rank_idx" ON "RisingStarLeaderboard"("rank");
 CREATE INDEX "RisingStarLeaderboard_paidSignups_idx" ON "RisingStarLeaderboard"("paidSignups" DESC);
 
--- Insert default bonus configurations
+-- Insert default bonus configurations (Updated - $500 top prize)
 INSERT INTO "BonusConfiguration" ("id", "name", "description", "minPaidSignups", "bonusAmount", "isActive") VALUES
-('bonus1', 'Rising Star - 1st Place', 'Highest paid signups this month', 50, 1000.00, true),
-('bonus2', 'Rising Star - 2nd Place', 'Second highest paid signups', 40, 500.00, true),
-('bonus3', 'Rising Star - 3rd Place', 'Third highest paid signups', 30, 250.00, true),
-('bonus4', 'Rising Star - Top 10', 'Ranked 4-10 in paid signups', 20, 100.00, true),
-('bonus5', 'Rising Star - Top 50', 'Ranked 11-50 in paid signups', 10, 50.00, true);
+('bonus1', 'Rising Star - 1st Place', 'Highest paid signups this month', 50, 500.00, true),
+('bonus2', 'Rising Star - 2nd Place', 'Second highest paid signups', 40, 250.00, true),
+('bonus3', 'Rising Star - 3rd Place', 'Third highest paid signups', 30, 150.00, true),
+('bonus4', 'Rising Star - Top 10', 'Ranked 4-10 in paid signups', 20, 75.00, true),
+('bonus5', 'Rising Star - Top 50', 'Ranked 11-50 in paid signups', 10, 25.00, true);
