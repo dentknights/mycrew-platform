@@ -1,10 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
+  output: 'standalone',
   images: {
-    domains: ['localhost', 'mycrew.com'],
+    domains: ['localhost', 'mycrew.com', '100.98.72.30'],
     remotePatterns: [
       {
         protocol: 'https',
