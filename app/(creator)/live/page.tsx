@@ -14,9 +14,33 @@ export default function GoLivePage() {
 
   const handleGoLive = async () => {
     setIsLoading(true)
-    // API call to create stream would go here
-    const streamId = 'stream_' + Date.now()
-    router.push(`/live/${streamId}`)
+    
+    try {
+      // Create stream via API
+      const response = await fetch('/api/live/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          isNSFW,
+          allowTips,
+          allowBattle,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        router.push(`/live/${data.stream.id}`)
+      } else {
+        alert('Failed to create stream')
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error('Error creating stream:', error)
+      alert('Failed to create stream')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -162,6 +186,36 @@ export default function GoLivePage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Battle Royale Notice */}
+      <div className="mt-8 bg-gradient-to-r from-purple-900/30 to-[#ff6b9d]/20 rounded-xl p-6 border border-purple-500/30">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl">🏆</span>
+          </div>
+          <div>
+            <h3 className="text-white font-bold text-lg mb-1">Battle Royale Coming Soon</h3>
+            <p className="text-gray-400 text-sm mb-3">
+              Large-scale creator battles with 4-16 participants competing for 30 minutes. 
+              Fans tip to support their favorites. Winners get cash prizes and featured placement.
+            </p>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-purple-400">
+                <strong>30 min</strong> battles
+              </span>
+              <span className="text-purple-400">
+                <strong>$1,000+</strong> prizes
+              </span>
+              <span className="text-purple-400">
+                <strong>4-16</strong> creators
+              </span>
+            </div>
+            <p className="text-gray-500 text-xs mt-3">
+              Rolling out when platform reaches 500+ active creators
+            </p>
+          </div>
         </div>
       </div>
     </div>
