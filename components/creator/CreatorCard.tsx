@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Verified, Users, Heart } from 'lucide-react'
+import { Verified, Users, Heart, Lock } from 'lucide-react'
 
 interface Creator {
   id: string
@@ -29,36 +29,36 @@ export function CreatorCard({ creator, compact = false }: CreatorCardProps) {
     return (
       <Link 
         href={`/creator/${creator.username}`}
-        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#1a1a1a] transition-colors group"
+        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#161616] transition-all group"
       >
-        <div className="relative w-12 h-12 rounded-full overflow-hidden bg-[#2d2d2d] flex-shrink-0">
-          <div className="w-full h-full bg-gradient-to-br from-[#ff6b9d] to-[#e91e63] flex items-center justify-center text-white font-semibold">
+        <div className="relative w-11 h-11 rounded-full overflow-hidden bg-[#1c1c1c] flex-shrink-0 ring-2 ring-[#262626] group-hover:ring-[#363636] transition-all">
+          <div className="w-full h-full bg-gradient-to-br from-[#1c1c1c] to-[#262626] flex items-center justify-center text-white font-semibold text-sm">
             {creator.displayName[0]}
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            <span className="text-white font-medium truncate group-hover:text-[#ff6b9d] transition-colors">
+          <div className="flex items-center gap-1.5">
+            <span className="text-white font-medium text-sm truncate group-hover:text-[#0095f6] transition-colors">
               {creator.displayName}
             </span>
             {creator.isVerified && (
-              <Verified size={14} className="text-[#ff6b9d] fill-[#ff6b9d]" />
+              <Verified size={14} className="text-[#0095f6] fill-[#0095f6]" />
             )}
           </div>
-          <p className="text-sm text-gray-500 truncate">@{creator.username}</p>
+          <p className="text-xs text-[#6b7280] truncate">@{creator.username}</p>
         </div>
         <div className="text-right">
-          <p className="text-[#ff6b9d] font-semibold">${creator.lowestTierPrice}</p>
-          <p className="text-xs text-gray-500">/month</p>
+          <p className="text-white font-semibold text-sm">${creator.lowestTierPrice}</p>
+          <p className="text-xs text-[#6b7280]">/mo</p>
         </div>
       </Link>
     )
   }
 
   return (
-    <div className="bg-[#121212] rounded-xl overflow-hidden border border-[#2d2d2d] hover:border-[#ff6b9d]/50 transition-all duration-300 group">
+    <div className="bg-[#111111] rounded-xl overflow-hidden border border-[#1f1f1f] hover:border-[#262626] transition-all duration-200 group">
       {/* Banner */}
-      <div className="relative h-32 bg-gradient-to-r from-[#ff6b9d]/30 to-[#e91e63]/30">
+      <div className="relative h-28 bg-gradient-to-r from-[#161616] to-[#1c1c1c]">
         {creator.bannerImage ? (
           <Image
             src={creator.bannerImage}
@@ -67,12 +67,12 @@ export function CreatorCard({ creator, compact = false }: CreatorCardProps) {
             className="object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-r from-[#ff6b9d]/20 to-[#e91e63]/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1c1c1c] to-[#262626]" />
         )}
         
         {/* NSFW Badge */}
         {creator.isNSFW && (
-          <div className="absolute top-3 right-3 px-2 py-1 bg-red-500/80 text-white text-xs font-semibold rounded-full">
+          <div className="absolute top-3 right-3 px-2 py-1 bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-[#ff3b30] text-[10px] font-bold uppercase tracking-wider rounded">
             18+
           </div>
         )}
@@ -81,44 +81,44 @@ export function CreatorCard({ creator, compact = false }: CreatorCardProps) {
       {/* Content */}
       <div className="px-4 pb-4">
         {/* Avatar & Stats */}
-        <div className="relative flex justify-between items-end -mt-10 mb-3">
+        <div className="relative flex justify-between items-end -mt-8 mb-3">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full border-4 border-[#121212] overflow-hidden bg-[#2d2d2d]">
-              <div className="w-full h-full bg-gradient-to-br from-[#ff6b9d] to-[#e91e63] flex items-center justify-center text-white text-2xl font-bold">
+            <div className="w-16 h-16 rounded-full border-4 border-[#111111] overflow-hidden bg-[#1c1c1c] ring-1 ring-[#262626]">
+              <div className="w-full h-full bg-gradient-to-br from-[#1c1c1c] to-[#262626] flex items-center justify-center text-white text-xl font-bold">
                 {creator.displayName[0]}
               </div>
             </div>
             {creator.isVerified && (
-              <div className="absolute -bottom-1 -right-1 bg-[#121212] rounded-full p-0.5">
-                <Verified size={20} className="text-[#ff6b9d] fill-[#ff6b9d]" />
+              <div className="absolute -bottom-0.5 -right-0.5 bg-[#111111] rounded-full p-0.5">
+                <Verified size={18} className="text-[#0095f6] fill-[#0095f6]" />
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-4 mb-2">
+          <div className="flex items-center gap-4 mb-1">
             <div className="text-center">
-              <p className="text-white font-semibold">
+              <p className="text-white font-bold text-sm">
                 {(creator.followerCount / 1000).toFixed(1)}K
               </p>
-              <p className="text-xs text-gray-500">followers</p>
+              <p className="text-[10px] text-[#6b7280] uppercase tracking-wider">followers</p>
             </div>
             <div className="text-center">
-              <p className="text-white font-semibold">
+              <p className="text-white font-bold text-sm">
                 {(creator.subscriptionCount / 1000).toFixed(1)}K
               </p>
-              <p className="text-xs text-gray-500">subscribers</p>
+              <p className="text-[10px] text-[#6b7280] uppercase tracking-wider">subs</p>
             </div>
           </div>
         </div>
 
         {/* Info */}
         <div className="mb-3">
-          <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+          <h3 className="text-white font-bold text-base flex items-center gap-1.5">
             {creator.displayName}
-            {creator.isVerified && <Verified size={16} className="text-[#ff6b9d] fill-[#ff6b9d]" />}
+            {creator.isVerified && <Verified size={14} className="text-[#0095f6] fill-[#0095f6]" />}
           </h3>
-          <p className="text-gray-500 text-sm">@{creator.username}</p>
-          <p className="text-gray-400 text-sm mt-2 line-clamp-2">{creator.bio}</p>
+          <p className="text-[#6b7280] text-xs">@{creator.username}</p>
+          <p className="text-[#9ca3af] text-sm mt-2 line-clamp-2 leading-relaxed">{creator.bio}</p>
         </div>
 
         {/* Preview Images */}
@@ -127,10 +127,10 @@ export function CreatorCard({ creator, compact = false }: CreatorCardProps) {
             {creator.previewImages.slice(0, 3).map((img, i) => (
               <div 
                 key={i} 
-                className="w-16 h-16 rounded-lg bg-[#2d2d2d] overflow-hidden flex-shrink-0"
+                className="w-14 h-14 rounded-lg bg-[#1c1c1c] overflow-hidden flex-shrink-0 ring-1 ring-[#262626]"
               >
-                <div className="w-full h-full bg-gradient-to-br from-[#ff6b9d]/20 to-[#e91e63]/20 flex items-center justify-center">
-                  <Heart size={16} className="text-[#ff6b9d]" />
+                <div className="w-full h-full bg-gradient-to-br from-[#1c1c1c] to-[#262626] flex items-center justify-center">
+                  <Lock size={14} className="text-[#6b7280]" />
                 </div>
               </div>
             ))}
@@ -140,7 +140,7 @@ export function CreatorCard({ creator, compact = false }: CreatorCardProps) {
         {/* Subscribe Button */}
         <Link
           href={`/creator/${creator.username}/subscribe`}
-          className="block w-full py-3 bg-[#ff6b9d] hover:bg-[#f06292] text-white text-center font-semibold rounded-lg transition-colors"
+          className="block w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white text-center font-semibold rounded-lg transition-all text-sm"
         >
           Subscribe ${creator.lowestTierPrice}/mo
         </Link>

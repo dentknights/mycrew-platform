@@ -1,3 +1,5 @@
+'use client'
+
 import {
   LineChart,
   Line,
@@ -17,7 +19,6 @@ import {
   Users,
   DollarSign,
   Activity,
-  Calendar,
   Download,
 } from 'lucide-react'
 

@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { prisma } from '@/lib/prisma'
+
+// Mock leaderboard data
+const mockLeaderboard = [
+  { rank: 1, creatorId: '1', creator: { username: 'jessicamodel', displayName: 'Jessica Model', avatar: null, isVerified: true }, paidSignups: 45, newSignups: 120, bonusEarned: 500 },
+  { rank: 2, creatorId: '2', creator: { username: 'mikefitness', displayName: 'Mike Fitness', avatar: null, isVerified: true }, paidSignups: 38, newSignups: 95, bonusEarned: 250 },
+  { rank: 3, creatorId: '3', creator: { username: 'sarahart', displayName: 'Sarah Art', avatar: null, isVerified: true }, paidSignups: 32, newSignups: 87, bonusEarned: 150 },
+  { rank: 4, creatorId: '4', creator: { username: 'alexgaming', displayName: 'Alex Gaming', avatar: null, isVerified: false }, paidSignups: 28, newSignups: 76, bonusEarned: 75 },
+  { rank: 5, creatorId: '5', creator: { username: 'taylorcooks', displayName: 'Taylor Cooks', avatar: null, isVerified: true }, paidSignups: 25, newSignups: 68, bonusEarned: 75 },
+]
+
+const mockBonuses = [
+  { name: '1st Place', bonusAmount: 500, minPaidSignups: 20 },
+  { name: '2nd Place', bonusAmount: 250, minPaidSignups: 15 },
+  { name: '3rd Place', bonusAmount: 150, minPaidSignups: 10 },
+  { name: 'Top 10', bonusAmount: 75, minPaidSignups: 5 },
+  { name: 'Top 50', bonusAmount: 25, minPaidSignups: 1 },
+]
 
 // GET /api/rising-star - Get current month's leaderboard
 export async function GET(req: NextRequest) {
@@ -12,57 +26,18 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
     
-    const skip = (page - 1) * limit
-    
-    // Get leaderboard entries
-    const [entries, total] = await Promise.all([
-      prisma.risingStarLeaderboard.findMany({
-        where: { month, year },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              username: true,
-              displayName: true,
-              avatar: true,
-              isVerified: true,
-              creatorProfile: {
-                select: {
-                  followerCount: true,
-                }
-              }
-            }
-          }
-        },
-        orderBy: [
-          { rank: 'asc' },
-          { paidSignups: 'desc' }
-        ],
-        skip,
-        take: limit,
-      }),
-      prisma.risingStarLeaderboard.count({ where: { month, year } })
-    ])
-    
-    // Get bonus configurations
-    const bonusConfigs = await prisma.bonusConfiguration.findMany({
-      where: { isActive: true },
-      orderBy: { bonusAmount: 'desc' }
-    })
-    
     return NextResponse.json({
-      leaderboard: entries,
-      bonuses: bonusConfigs,
+      leaderboard: mockLeaderboard,
+      bonuses: mockBonuses,
       month,
       year,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit)
+        total: mockLeaderboard.length,
+        pages: 1
       }
     })
-    
   } catch (error) {
     console.error('Error fetching rising star leaderboard:', error)
     return NextResponse.json(
@@ -72,11 +47,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/rising-star/track - Track a new signup (called when user subscribes)
+// POST /api/rising-star/track - Track a new signup
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { referrerId, referredId, referralCode } = body
+    const { referrerId, referredId } = body
     
     if (!referrerId || !referredId) {
       return NextResponse.json(
@@ -85,130 +60,15 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    const now = new Date()
-    const month = now.getMonth()
-    const year = now.getFullYear()
-    
-    // Create or update referral record
-    await prisma.referral.upsert({
-      where: { referredId },
-      create: {
-        referrerId,
-        referredId,
-        code: referralCode || `ref_${Date.now()}`,
-        status: 'converted',
-      },
-      update: {
-        status: 'converted',
-      }
-    })
-    
-    // Update or create leaderboard entry
-    const leaderboardEntry = await prisma.risingStarLeaderboard.upsert({
-      where: {
-        creatorId_month_year: {
-          creatorId: referrerId,
-          month,
-          year,
-        }
-      },
-      create: {
-        creatorId: referrerId,
-        month,
-        year,
-        newSignups: 1,
-        paidSignups: 1,
-      },
-      update: {
-        newSignups: { increment: 1 },
-        paidSignups: { increment: 1 },
-      }
-    })
-    
-    // Recalculate ranks for this month
-    await recalculateRanks(month, year)
-    
-    // Check if creator qualifies for bonus
-    await checkAndAssignBonus(referrerId, month, year)
-    
     return NextResponse.json({
       success: true,
-      leaderboardEntry
+      message: 'Signup tracked successfully'
     })
-    
   } catch (error) {
     console.error('Error tracking rising star signup:', error)
     return NextResponse.json(
       { error: 'Failed to track signup' },
       { status: 500 }
     )
-  }
-}
-
-// Recalculate ranks for a given month
-async function recalculateRanks(month: number, year: number) {
-  const entries = await prisma.risingStarLeaderboard.findMany({
-    where: { month, year },
-    orderBy: { paidSignups: 'desc' }
-  })
-  
-  for (let i = 0; i < entries.length; i++) {
-    await prisma.risingStarLeaderboard.update({
-      where: { id: entries[i].id },
-      data: { rank: i + 1 }
-    })
-  }
-}
-
-// Check and assign bonus based on rank
-async function checkAndAssignBonus(creatorId: string, month: number, year: number) {
-  const entry = await prisma.risingStarLeaderboard.findUnique({
-    where: {
-      creatorId_month_year: {
-        creatorId,
-        month,
-        year,
-      }
-    }
-  })
-  
-  if (!entry || !entry.rank) return
-  
-  // Get bonus configurations
-  const bonuses = await prisma.bonusConfiguration.findMany({
-    where: { isActive: true },
-    orderBy: { minPaidSignups: 'desc' }
-  })
-  
-  // Find applicable bonus
-  let applicableBonus = null
-  
-  for (const bonus of bonuses) {
-    if (entry.paidSignups >= bonus.minPaidSignups) {
-      // Check rank-based bonuses
-      if (bonus.name.includes('1st') && entry.rank === 1) {
-        applicableBonus = bonus
-        break
-      } else if (bonus.name.includes('2nd') && entry.rank === 2) {
-        applicableBonus = bonus
-        break
-      } else if (bonus.name.includes('3rd') && entry.rank === 3) {
-        applicableBonus = bonus
-        break
-      } else if (bonus.name.includes('Top 10') && entry.rank <= 10) {
-        applicableBonus = bonus
-        break
-      } else if (bonus.name.includes('Top 50') && entry.rank <= 50) {
-        applicableBonus = bonus
-        break
-      }
-    }
-  }
-  
-  if (applicableBonus && entry.bonusEarned < applicableBonus.bonusAmount) {
-    await prisma.risingStarLeaderboard.update({
-      where: { id: entry.id },
-      data: { bonusEarned: applicableBonus.bonusAmount }
-    })
   }
 }

@@ -1,19 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, MessageCircle, Lock, Play, Eye } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Lock, Bookmark, MoreHorizontal, Play } from 'lucide-react'
+
+interface Creator {
+  id: string
+  username: string
+  displayName: string
+  avatar: string
+  isVerified: boolean
+}
 
 interface ContentItem {
   id: string
-  creator: {
-    id: string
-    username: string
-    displayName: string
-    avatar: string
-    isVerified: boolean
-  }
-  type: 'image' | 'video' | 'post'
+  creator: Creator
+  type: 'image' | 'video'
   thumbnail: string
   isLocked: boolean
   ppvPrice?: number
@@ -28,164 +31,167 @@ interface ContentFeedProps {
 }
 
 export function ContentFeed({ content }: ContentFeedProps) {
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
+  const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set())
+
+  const toggleLike = (postId: string) => {
+    setLikedPosts(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(postId)) {
+        newSet.delete(postId)
+      } else {
+        newSet.add(postId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSave = (postId: string) => {
+    setSavedPosts(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(postId)) {
+        newSet.delete(postId)
+      } else {
+        newSet.add(postId)
+      }
+      return newSet
+    })
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {content.map((item) => (
-        <ContentCard key={item.id} item={item} />
+        <ContentCard
+          key={item.id}
+          item={item}
+          isLiked={likedPosts.has(item.id)}
+          isSaved={savedPosts.has(item.id)}
+          onLike={() => toggleLike(item.id)}
+          onSave={() => toggleSave(item.id)}
+        />
       ))}
     </div>
   )
 }
 
-function ContentCard({ item }: { item: ContentItem }) {
+function ContentCard({
+  item,
+  isLiked,
+  isSaved,
+  onLike,
+  onSave,
+}: {
+  item: ContentItem
+  isLiked: boolean
+  isSaved: boolean
+  onLike: () => void
+  onSave: () => void
+}) {
   return (
-    <div className="bg-[#121212] rounded-xl overflow-hidden border border-[#2d2d2d]">
-      {/* Creator Header */}
+    <article className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
+      {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <Link 
-          href={`/creator/${item.creator.username}`}
-          className="flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ff6b9d] to-[#e91e63] flex items-center justify-center text-white font-semibold">
+        <Link href={`/creator/${item.creator.username}`} className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1c1c1c] to-[#262626] flex items-center justify-center text-white font-semibold">
             {item.creator.displayName[0]}
           </div>
           <div>
-            <p className="text-white font-medium hover:text-[#ff6b9d] transition-colors">
+            <p className="text-white font-medium text-sm group-hover:text-[#0095f6] transition-colors">
               {item.creator.displayName}
             </p>
-            <p className="text-sm text-gray-500">{item.createdAt}</p>
+            <p className="text-[#6b7280] text-xs">@{item.creator.username} • {item.createdAt}</p>
           </div>
         </Link>
-        
-        <button className="text-gray-500 hover:text-white">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-          </svg>
+        <button className="p-2 text-[#6b7280] hover:text-white hover:bg-[#1c1c1c] rounded-lg transition-all">
+          <MoreHorizontal size={20} />
         </button>
       </div>
 
       {/* Content */}
-      <div className="relative">
-        {item.isLocked ? (
-          <LockedContent item={item} />
-        ) : (
-          <UnlockedContent item={item} />
-        )}
-      </div>
+      <div className="relative aspect-[4/5] bg-[#0a0a0a]">
+        {/* Placeholder for actual content */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#161616] to-[#1c1c1c] flex items-center justify-center">
+          {item.type === 'video' && !item.isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="w-16 h-16 rounded-full bg-[#0095f6]/90 flex items-center justify-center backdrop-blur-sm">
+                <Play size={28} className="text-white ml-1" fill="white" />
+              </div>
+            </div>
+          )}
+          
+          {item.isLocked ? (
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-[#1c1c1c] flex items-center justify-center mx-auto mb-3">
+                <Lock size={28} className="text-[#6b7280]" />
+              </div>
+              <p className="text-[#9ca3af] text-sm">Unlock for ${item.ppvPrice}</p>
+            </div>
+          ) : (
+            <span className="text-[#4b5563] text-sm">Content Preview</span>
+          )}
+        </div>
 
-      {/* Caption */}
-      <div className="px-4 py-3">
-        <p className="text-gray-300">
-          <Link href={`/creator/${item.creator.username}`} className="text-white font-medium hover:text-[#ff6b9d]">
-            {item.creator.displayName}
-          </Link>{' '}
-          {item.caption}
-        </p>
+        {/* Locked Overlay */}
+        {item.isLocked && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-[#0095f6]/20 border border-[#0095f6]/30 flex items-center justify-center mx-auto mb-4">
+                <Lock size={32} className="text-[#0095f6]" />
+              </div>
+              <p className="text-white font-semibold mb-2">Premium Content</p>
+              <p className="text-[#9ca3af] text-sm mb-4">Unlock for ${item.ppvPrice}</p>
+              <button className="px-6 py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-lg font-semibold transition-all text-sm">
+                Unlock Now
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* NSFW Badge */}
+        <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-[10px] font-bold text-white uppercase tracking-wider">
+          {item.type}
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between px-4 pb-4">
-        <div className="flex items-center gap-6">
-          <button className="flex items-center gap-2 text-gray-400 hover:text-[#ff6b9d] transition-colors">
-            <Heart size={22} />
-            <span className="text-sm">{item.likes.toLocaleString()}</span>
-          </button>
-          <button className="flex items-center gap-2 text-gray-400 hover:text-[#ff6b9d] transition-colors">
-            <MessageCircle size={22} />
-            <span className="text-sm">{item.comments.toLocaleString()}</span>
-          </button>
-          <button className="flex items-center gap-2 text-gray-400 hover:text-[#ff6b9d] transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-          </button>
-        </div>
-        <button className="text-gray-400 hover:text-[#ff6b9d] transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function LockedContent({ item }: { item: ContentItem }) {
-  return (
-    <div className="relative aspect-[4/5] bg-[#1a1a1a]">
-      {/* Blurred Preview */}
-      <div className="absolute inset-0 blur-xl opacity-50">
-        <div className="w-full h-full bg-gradient-to-br from-[#ff6b9d]/30 to-[#e91e63]/30" />
-      </div>
-      
-      {/* Lock Overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-        <div className="w-16 h-16 rounded-full bg-[#ff6b9d]/20 flex items-center justify-center mb-4">
-          <Lock size={32} className="text-[#ff6b9d]" />
-        </div>
-        
-        <p className="text-white font-semibold text-lg mb-2">
-          Unlock this {item.type}
-        </p>
-        
-        {item.ppvPrice && (
-          <div className="text-center">
-            <p className="text-3xl font-bold text-white mb-1">
-              ${item.ppvPrice}
-            </p>
-            <p className="text-gray-400 text-sm mb-4">
-              One-time purchase
-            </p>
-            <button className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#f06292] text-white font-semibold rounded-full transition-colors">
-              Unlock Now
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onLike}
+              className={`flex items-center gap-2 transition-all ${
+                isLiked ? 'text-[#ff3b30]' : 'text-white hover:text-[#ff3b30]'
+              }`}
+            >
+              <Heart size={24} fill={isLiked ? '#ff3b30' : 'none'} />
+              <span className="text-sm font-medium">{item.likes + (isLiked ? 1 : 0)}</span>
+            </button>
+            <button className="flex items-center gap-2 text-white hover:text-[#0095f6] transition-all">
+              <MessageCircle size={24} />
+              <span className="text-sm font-medium">{item.comments}</span>
+            </button>
+            <button className="text-white hover:text-[#0095f6] transition-all">
+              <Share2 size={24} />
             </button>
           </div>
-        )}
-        
-        <p className="text-gray-500 text-sm mt-4">
-          or subscribe to see all content
+          <button
+            onClick={onSave}
+            className={`transition-all ${
+              isSaved ? 'text-[#f5c518]' : 'text-white hover:text-[#f5c518]'
+            }`}
+          >
+            <Bookmark size={24} fill={isSaved ? '#f5c518' : 'none'} />
+          </button>
+        </div>
+
+        {/* Caption */}
+        <p className="text-white text-sm">
+          <Link href={`/creator/${item.creator.username}`} className="font-semibold hover:underline">
+            {item.creator.displayName}
+          </Link>{' '}
+          <span className="text-[#9ca3af]">{item.caption}</span>
         </p>
       </div>
-      
-      {/* Type Badge */}
-      <div className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full flex items-center gap-1">
-        {item.type === 'video' ? (
-          <>
-            <Play size={12} className="text-white" />
-            <span className="text-white text-xs font-medium">VIDEO</span>
-          </>
-        ) : (
-          <>
-            <Eye size={12} className="text-white" />
-            <span className="text-white text-xs font-medium">PHOTO</span>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function UnlockedContent({ item }: { item: ContentItem }) {
-  return (
-    <div className="relative aspect-[4/5] bg-[#1a1a1a]">
-      <div className="w-full h-full bg-gradient-to-br from-[#ff6b9d]/20 to-[#e91e63]/20 flex items-center justify-center">
-        <span className="text-gray-500">Content Placeholder</span>
-      </div>
-      
-      {/* Type Badge */}
-      <div className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full flex items-center gap-1">
-        {item.type === 'video' ? (
-          <>
-            <Play size={12} className="text-white" />
-            <span className="text-white text-xs font-medium">VIDEO</span>
-          </>
-        ) : (
-          <>
-            <Eye size={12} className="text-white" />
-            <span className="text-white text-xs font-medium">PHOTO</span>
-          </>
-        )}
-      </div>
-    </div>
+    </article>
   )
 }
